@@ -18,25 +18,25 @@
     <p>✅ You are signed in. Protected content goes here.</p>
   </div>
 
-  <!-- Amplify from CDN (no build needed) -->
-  <script src="https://unpkg.com/aws-amplify@6.0.0/dist/aws-amplify.min.js"></script>
+  <!-- Amplify v6 from CDN -->
+  <script src="https://unpkg.com/aws-amplify@6/dist/aws-amplify.min.js"></script>
   <script>
-    // === Replace these with your Cognito values ===
-    const userPoolId = "us-east-1_E2EZxHIro";
-    const userPoolClientId = "1lijjoi66t6k9ioqbd9lgg4vle";
-    const domain = "us-east-1e2exhiro.auth.us-east-1.amazoncognito.com";
-    const redirectUri = "https://aurexuscapital.com/dashboard.html";  // this file’s URL
-    const logoutUri = "https://aurexuscapital.com/";
+    // === YOUR Cognito config (verified values) ===
+    const userPoolId       = "us-east-1_E2EzXHlro";
+    const userPoolClientId = "1iJjoi6t6tK9ioqbd9lgg4vle";
+    const domain           = "us-east-1e2exhiro.auth.us-east-1.amazoncognito.com";
+    const redirectUri      = "https://aurexuscapital.com/dashboard.html";
+    const logoutUri        = "https://aurexuscapital.com/";
 
-    // Configure Amplify Auth (Cognito Hosted UI)
-    aws_amplify.Amplify.configure({
+    const { Amplify, Auth } = aws_amplify;
+
+    Amplify.configure({
       Auth: {
         Cognito: {
           userPoolId,
           userPoolClientId,
-          // identityPoolId is optional; omit if you don’t use it
+          // identityPoolId optional
         },
-        // Hosted UI config
         loginWith: {
           oauth: {
             domain,
@@ -49,16 +49,18 @@
       }
     });
 
-    const Auth = aws_amplify.Auth;
-
     async function refreshUI() {
       try {
+        // Ensure tokens/session are available after redirect
+        await Auth.fetchAuthSession();
+
         const user = await Auth.currentAuthenticatedUser();
-        document.getElementById('whoami').textContent = `Signed in as: ${user?.attributes?.email || user?.username}`;
+        document.getElementById('whoami').textContent =
+          `Signed in as: ${user?.attributes?.email || user?.username}`;
         document.getElementById('loginBtn').style.display = 'none';
         document.getElementById('logoutBtn').style.display = 'inline-block';
         document.getElementById('app').style.display = 'block';
-      } catch {
+      } catch (e) {
         document.getElementById('whoami').textContent = 'Not signed in.';
         document.getElementById('loginBtn').style.display = 'inline-block';
         document.getElementById('logoutBtn').style.display = 'none';
@@ -66,11 +68,13 @@
       }
     }
 
-    document.getElementById('loginBtn').onclick = () => Auth.federatedSignIn(); // opens Hosted UI
-    document.getElementById('logoutBtn').onclick = () => Auth.signOut({ global: true }).then(() => location.href = logoutUri);
+    document.getElementById('loginBtn').onclick  = () => Auth.federatedSignIn();
+    document.getElementById('logoutBtn').onclick = () =>
+      Auth.signOut({ global: true }).then(() => location.href = logoutUri);
 
-    // Handle OAuth code → tokens
-    Auth.handleRedirectPromise().finally(refreshUI);
+    // On load, handle redirect & update UI
+    refreshUI();
   </script>
 </body>
 </html>
+
